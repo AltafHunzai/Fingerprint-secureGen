@@ -122,7 +122,7 @@
         </div>
     </div>
     <script>
-        const IP = 'localhost'
+        const IP = 'https://fingerprint-secure-gen.vercel.app/'
         const PORT = '8443'
         const captureBtn = document.getElementById('captureBtn');
         const captureClearBtn = document.getElementById('captureClearBtn');
@@ -256,7 +256,7 @@
             loadingDiv.classList.remove('hidden');
             matchBtn.disabled = true;
             const templateFormat = templateFormatSelect.value;
-            const url = `https://localhost:8443/SGIMatchScore?TemplateFormat=${templateFormat}`;
+            const url = `https://https://fingerprint-secure-gen.vercel.app//SGIMatchScore?TemplateFormat=${templateFormat}`;
             logMessage(`Sending match request with template format: ${templateFormat}`);
             fetch(url, {
                 method: 'POST',
