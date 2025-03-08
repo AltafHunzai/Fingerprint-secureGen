@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecuGen WebAPI Tester</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="container mx-auto">
+        <div class="bg-white p-8 rounded-lg shadow-lg mb-6">
+            <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">SecuGen WebAPI Tester</h1>
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fake Detection Level</label>
+                        <select id="fakeDetection" class="w-full rounded border border-gray-300 p-2">
+                            <option value="0">0 (Default)</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (ms)</label>
+                        <input type="number" id="timeout" value="10000"
+                            class="w-full rounded border border-gray-300 p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Template Format</label>
+                        <select id="templateFormat" class="w-full rounded border border-gray-300 p-2">
+                            <option value="ISO">ISO (Default)</option>
+                            <option value="ANSI">ANSI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">WSQ Compression Rate</label>
+                        <select id="wsqRate" class="w-full rounded border border-gray-300 p-2">
+                            <option value="0">0 (Default)</option>
+                            <option value="0.75">0.75</option>
+                            <option value="2.25">2.25</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <button id="captureBtn"
+                    class="bg-blue-500 text-white py-3 px-4 rounded hover:bg-blue-600 transition duration-200">
+                    Capture Fingerprint
+                </button>
+                <button id="captureClearBtn"
+                    class="bg-gray-500 text-white py-3 px-4 rounded hover:bg-gray-600 transition duration-200">
+                    Capture & Clear Previous
+                </button>
+            </div>
+            <div id="loading" class="hidden mt-4 text-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p class="mt-2 text-gray-600">Processing, please wait...</p>
+            </div>
+            <div class="mb-6 p-4 border border-gray-200 rounded-lg">
+                <h2 class="text-xl font-semibold mb-3 text-gray-700">Template Matching</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Template 1</label>
+                            <textarea id="template1" class="w-full rounded border border-gray-300 p-2 h-24"
+                                placeholder="Base64 encoded template"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Template 2</label>
+                            <textarea id="template2" class="w-full rounded border border-gray-300 p-2 h-24"
+                                placeholder="Base64 encoded template"></textarea>
+                        </div>
+                    </div>
+                    <button id="matchBtn"
+                        class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition duration-200">
+                        Compare Templates
+                    </button>
+                    <div id="matchResult" class="mt-2 text-center"></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-semibold mb-3 text-gray-700">Capture #1</h2>
+                    <div id="result1"
+                        class="border border-gray-200 rounded-lg p-4 min-h-[200px] flex flex-col items-center justify-center">
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold mb-3 text-gray-700">Capture #2</h2>
+                    <div id="result2"
+                        class="border border-gray-200 rounded-lg p-4 min-h-[200px] flex flex-col items-center justify-center">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-xl font-semibold text-gray-700">API Response Log</h2>
+                <button id="clearLogBtn"
+                    class="text-sm bg-red-500 text-white py-1 px-3 rounded hover:bg-red-600 transition duration-200">
+                    Clear Log
+                </button>
+            </div>
+            <div id="logPanel" class="bg-gray-800 text-green-400 p-4 rounded-lg h-64 overflow-y-auto font-mono text-sm">
+            </div>
+        </div>
+    </div>
+    <script>
+        const IP = 'localhost'
+        const PORT = '8443'
+        const captureBtn = document.getElementById('captureBtn');
+        const captureClearBtn = document.getElementById('captureClearBtn');
+        const matchBtn = document.getElementById('matchBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const loadingDiv = document.getElementById('loading');
+        const result1Div = document.getElementById('result1');
+        const result2Div = document.getElementById('result2');
+        const matchResultDiv = document.getElementById('matchResult');
+        const logPanel = document.getElementById('logPanel');
+        const template1Field = document.getElementById('template1');
+        const template2Field = document.getElementById('template2');
+        const fakeDetectionSelect = document.getElementById('fakeDetection');
+        const timeoutInput = document.getElementById('timeout');
+        const templateFormatSelect = document.getElementById('templateFormat');
+        const wsqRateSelect = document.getElementById('wsqRate');
+        let lastCapturedTemplate = null;
+        let currentCaptureTarget = 'result1';  // Toggle between result1 and result2
+        function logMessage(message, isError = false) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('pre');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            if (isError) {
+                logEntry.classList.add('text-red-500');
+            }
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+        function displayFingerprint(targetDiv, data) {
+            targetDiv.innerHTML = '';
+
+            if (data.ErrorCode === 0) {
+                const img = document.createElement('img');
+                img.src = `data:image/bmp;base64,${data.BMPBase64}`;
+                img.className = 'w-full h-auto rounded mt-2 max-h-[200px] object-contain';
+                targetDiv.appendChild(img);
+
+                const info = document.createElement('p');
+                info.className = 'mt-2 text-center text-gray-700';
+                info.textContent = `Quality: ${data.ImageQuality}, NFIQ: ${data.NFIQ}`;
+                targetDiv.appendChild(info);
+                if (targetDiv === result1Div) {
+                    template1Field.value = data.TemplateBase64;
+                } else {
+                    template2Field.value = data.TemplateBase64;
+                }
+                return data.TemplateBase64;
+            } else {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'text-red-500 text-center';
+                errorDiv.textContent = handleErrorCode(data.ErrorCode);
+                targetDiv.appendChild(errorDiv);
+                return null;
+            }
+        }
+        function handleErrorCode(errorCode) {
+            switch (errorCode) {
+                case 1:
+                    return 'Error: Device not connected.';
+                case 2:
+                    return 'Error: Capture timeout.';
+                default:
+                    return `Error: Unknown error (Code: ${errorCode})`;
+            }
+        }
+        function captureFingerprint(targetDiv) {
+            loadingDiv.classList.remove('hidden');
+            captureBtn.disabled = true;
+            captureClearBtn.disabled = true;
+            const fakeDetection = fakeDetectionSelect.value;
+            const timeout = timeoutInput.value;
+            const templateFormat = templateFormatSelect.value;
+            const wsqRate = wsqRateSelect.value;
+            const url = `https://${IP}:${PORT}/SGIFPCapture`;
+            logMessage(`Sending capture request: ${url}`);
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loadingDiv.classList.add('hidden');
+                    captureBtn.disabled = false;
+                    captureClearBtn.disabled = false;
+                    logMessage(`Received response: ${JSON.stringify(data, null, 2)}`);
+                    const template = displayFingerprint(targetDiv, data);
+                    if (template) {
+                        lastCapturedTemplate = template;
+                    }
+                    currentCaptureTarget = currentCaptureTarget === 'result1' ? 'result2' : 'result1';
+                })
+                .catch(error => {
+                    loadingDiv.classList.add('hidden');
+                    captureBtn.disabled = false;
+                    captureClearBtn.disabled = false;
+
+                    if (error instanceof TypeError) {
+                        const errorMsg = 'Error: Unable to reach the service. Please check if the client software is installed and running.';
+                        targetDiv.innerHTML = `<p class="text-red-500 text-center">${errorMsg}</p>`;
+                        logMessage(errorMsg, true);
+                    } else {
+                        targetDiv.innerHTML = `<p class="text-red-500 text-center">Error: ${error.message}</p>`;
+                        logMessage(`Error: ${error.message}`, true);
+                    }
+                });
+        }
+        captureBtn.addEventListener('click', function () {
+            const targetDiv = currentCaptureTarget === 'result1' ? result1Div : result2Div;
+            captureFingerprint(targetDiv);
+        });
+        captureClearBtn.addEventListener('click', function () {
+            result1Div.innerHTML = '';
+            result2Div.innerHTML = '';
+            template1Field.value = '';
+            template2Field.value = '';
+            matchResultDiv.innerHTML = '';
+            currentCaptureTarget = 'result1';
+            logMessage('Cleared all capture results');
+            captureFingerprint(result1Div);
+        });
+        matchBtn.addEventListener('click', function () {
+            const template1 = template1Field.value.trim();
+            const template2 = template2Field.value.trim();
+            if (!template1 || !template2) {
+                matchResultDiv.innerHTML = '<p class="text-red-500">Please capture or enter both templates</p>';
+                logMessage('Template matching error: Missing template(s)', true);
+                return;
+            }
+            loadingDiv.classList.remove('hidden');
+            matchBtn.disabled = true;
+            const templateFormat = templateFormatSelect.value;
+            const url = `https://localhost:8443/SGIMatchScore?TemplateFormat=${templateFormat}`;
+            logMessage(`Sending match request with template format: ${templateFormat}`);
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    Template1: template1,
+                    Template2: template2
+                })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loadingDiv.classList.add('hidden');
+                    matchBtn.disabled = false;
+
+                    logMessage(`Match result: ${JSON.stringify(data, null, 2)}`);
+
+                    if (data.ErrorCode === 0) {
+                        let matchClass, matchText;
+                        const score = data.MatchingScore;
+
+                        if (score > 100) {
+                            matchClass = 'text-green-600 font-bold';
+                            matchText = 'Strong Match';
+                        } else if (score > 50) {
+                            matchClass = 'text-yellow-600 font-bold';
+                            matchText = 'Possible Match';
+                        } else {
+                            matchClass = 'text-red-600 font-bold';
+                            matchText = 'No Match';
+                        }
+                        matchResultDiv.innerHTML = `
+                        <p class="text-gray-700">Score: <span class="${matchClass}">${score}/199</span></p>
+                        <p class="${matchClass}">${matchText}</p>
+                    `;
+                    } else {
+                        matchResultDiv.innerHTML = `<p class="text-red-500 text-center">${handleErrorCode(data.ErrorCode)}</p>`;
+                    }
+                })
+                .catch(error => {
+                    loadingDiv.classList.add('hidden');
+                    matchBtn.disabled = false;
+
+                    const errorMsg = error instanceof TypeError
+                        ? 'Error: Unable to reach the service. Please check if the client software is installed and running.'
+                        : `Error: ${error.message}`;
+
+                    matchResultDiv.innerHTML = `<p class="text-red-500 text-center">${errorMsg}</p>`;
+                    logMessage(errorMsg, true);
+                });
+        });
+        clearLogBtn.addEventListener('click', function () {
+            logPanel.innerHTML = '<pre>--- SecuGen WebAPI Tester Log ---</pre>';
+        });
+    </script>
+</body>
+
+</html>
