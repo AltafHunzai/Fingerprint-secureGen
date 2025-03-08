@@ -195,7 +195,7 @@
             const timeout = timeoutInput.value;
             const templateFormat = templateFormatSelect.value;
             const wsqRate = wsqRateSelect.value;
-            const url = `${IP}/SGIFPCapture`;
+  const url = `https://localhost:8443/SGIFPCapture`;
             logMessage(`Sending capture request: ${url}`);
             fetch(url)
                 .then(response => {
@@ -255,7 +255,7 @@
             loadingDiv.classList.remove('hidden');
             matchBtn.disabled = true;
             const templateFormat = templateFormatSelect.value;
-            const url = `https://https://fingerprint-secure-gen.vercel.app//SGIMatchScore?TemplateFormat=${templateFormat}`;
+            const url = `https://fingerprint-secure-gen.vercel.app//SGIMatchScore?TemplateFormat=${templateFormat}`;
             logMessage(`Sending match request with template format: ${templateFormat}`);
             fetch(url, {
                 method: 'POST',
