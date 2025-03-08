@@ -123,7 +123,6 @@
     </div>
     <script>
         const IP = 'https://fingerprint-secure-gen.vercel.app/'
-        const PORT = '8443'
         const captureBtn = document.getElementById('captureBtn');
         const captureClearBtn = document.getElementById('captureClearBtn');
         const matchBtn = document.getElementById('matchBtn');
@@ -196,7 +195,7 @@
             const timeout = timeoutInput.value;
             const templateFormat = templateFormatSelect.value;
             const wsqRate = wsqRateSelect.value;
-            const url = `https://${IP}:${PORT}/SGIFPCapture`;
+            const url = `${IP}/SGIFPCapture`;
             logMessage(`Sending capture request: ${url}`);
             fetch(url)
                 .then(response => {
